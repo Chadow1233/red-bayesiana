@@ -1,0 +1,79 @@
+[
+    {
+        "nombre": "Lluvia",
+        "estados": [
+            "sí",
+            "no"
+        ],
+        "padres": [
+            "Temperatura"
+        ],
+        "probabilidades": {
+            "alta": {
+                "sí": 0.1,
+                "no": 0.9
+            },
+            "baja": {
+                "sí": 0.6,
+                "no": 0.4
+            }
+        }
+    },
+    {
+        "nombre": "Aspersor",
+        "estados": [
+            "sí",
+            "no"
+        ],
+        "padres": [],
+        "probabilidades": {
+            "sí": 0.4,
+            "no": 0.6
+        }
+    },
+    {
+        "nombre": "Césped mojado",
+        "estados": [
+            "sí",
+            "no"
+        ],
+        "padres": [
+            "Lluvia",
+            "Aspersor"
+        ],
+        "probabilidades": {
+            "sí": {
+                "sí": {
+                    "sí": 0.99,
+                    "no": 0.01
+                },
+                "no": {
+                    "sí": 0.9,
+                    "no": 0.1
+                }
+            },
+            "no": {
+                "sí": {
+                    "sí": 0.8,
+                    "no": 0.2
+                },
+                "no": {
+                    "sí": 0.01,
+                    "no": 0.99
+                }
+            }
+        }
+    },
+    {
+        "nombre": "Temperatura",
+        "estados": [
+            "alta",
+            "baja"
+        ],
+        "padres": [],
+        "probabilidades": {
+            "alta": 0.6,
+            "baja": 0.4
+        }
+    }
+]
