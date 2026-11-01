@@ -1,79 +1,92 @@
 [
     {
-        "nombre": "Lluvia",
-        "estados": [
-            "sí",
-            "no"
-        ],
-        "padres": [
-            "Temperatura"
-        ],
-        "probabilidades": {
-            "alta": {
-                "sí": 0.1,
-                "no": 0.9
-            },
-            "baja": {
-                "sí": 0.6,
-                "no": 0.4
-            }
-        }
-    },
-    {
-        "nombre": "Aspersor",
-        "estados": [
-            "sí",
-            "no"
-        ],
+        "nombre": "A",
+        "estados": ["sí", "no"],
         "padres": [],
         "probabilidades": {
-            "sí": 0.4,
-            "no": 0.6
+            "sí": 0.5,
+            "no": 0.5
         }
     },
     {
-        "nombre": "Césped mojado",
-        "estados": [
-            "sí",
-            "no"
-        ],
-        "padres": [
-            "Lluvia",
-            "Aspersor"
-        ],
+        "nombre": "B",
+        "estados": ["sí", "no"],
+        "padres": ["A"],
         "probabilidades": {
-            "sí": {
-                "sí": {
-                    "sí": 0.99,
-                    "no": 0.01
-                },
-                "no": {
-                    "sí": 0.9,
-                    "no": 0.1
-                }
-            },
-            "no": {
-                "sí": {
-                    "sí": 0.8,
-                    "no": 0.2
-                },
-                "no": {
-                    "sí": 0.01,
-                    "no": 0.99
-                }
-            }
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
         }
     },
     {
-        "nombre": "Temperatura",
-        "estados": [
-            "alta",
-            "baja"
-        ],
-        "padres": [],
+        "nombre": "C",
+        "estados": ["sí", "no"],
+        "padres": ["B"],
         "probabilidades": {
-            "alta": 0.6,
-            "baja": 0.4
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
+        }
+    },
+    {
+        "nombre": "D",
+        "estados": ["sí", "no"],
+        "padres": ["C"],
+        "probabilidades": {
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
+        }
+    },
+    {
+        "nombre": "E",
+        "estados": ["sí", "no"],
+        "padres": ["D"],
+        "probabilidades": {
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
+        }
+    },
+    {
+        "nombre": "F",
+        "estados": ["sí", "no"],
+        "padres": ["E"],
+        "probabilidades": {
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
+        }
+    },
+    {
+        "nombre": "G",
+        "estados": ["sí", "no"],
+        "padres": ["F"],
+        "probabilidades": {
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
+        }
+    },
+    {
+        "nombre": "H",
+        "estados": ["sí", "no"],
+        "padres": ["G"],
+        "probabilidades": {
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
+        }
+    },
+    {
+        "nombre": "I",
+        "estados": ["sí", "no"],
+        "padres": ["H"],
+        "probabilidades": {
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
+        }
+    },
+    {
+        "nombre": "J",
+        "estados": ["sí", "no"],
+        "padres": ["I"],
+        "probabilidades": {
+            "sí": {"sí": 0.8, "no": 0.2},
+            "no": {"sí": 0.2, "no": 0.8}
         }
     }
 ]

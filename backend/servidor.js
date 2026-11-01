@@ -1,17 +1,38 @@
 import express from "express";
 import { red as redInicial } from "./red.js";
-import { consultar } from "./consulta.js";
+import { consultar, validarVariablesNecesarias } from "./consulta.js";
 import { guardarRed, cargarRed } from "./almacenamiento.js";
 import { Variable } from "./redBayesiana.js";
 
 const app = express();
 const PUERTO = 3000;
-let red = cargarRed() || redInicial;
 
-// Permite recibir información en formato JSON.
+let red;
+
+// Cargar la red guardada.
+try {
+    red = cargarRed();
+
+    if (red === null) {
+        red = redInicial;
+        console.log("No existe una red guardada. Se utilizará la red inicial.");
+    } else {
+        console.log("Red guardada cargada correctamente.");
+    }
+
+} catch (error) {
+    console.error(error.message);
+    process.exit(1);
+}
+
+// Permitir recibir información JSON.
 app.use(express.json());
 
-// Obtener las variables de la red.
+
+// =====================================
+// OBTENER VARIABLES
+// =====================================
+
 app.get("/api/variables", (req, res) => {
     const variables = red.variables.map(variable => ({
         nombre: variable.nombre,
@@ -22,91 +43,82 @@ app.get("/api/variables", (req, res) => {
     res.json(variables);
 });
 
-// Consultar probabilidades.
-app.post("/api/consultar", (req, res) => {
-    const { variable, evidencia = {} } = req.body;
 
-    const variableExiste = red.variables.some(
-        elemento => elemento.nombre === variable
-    );
+// =====================================
+// OBTENER TODA LA RED
+// =====================================
 
-    if (!variableExiste) {
-        return res.status(400).json({
-            error: "La variable consultada no existe."
-        });
-    }
+app.get("/api/red", (req, res) => {
+    const variables = red.variables.map(variable => ({
+        nombre: variable.nombre,
+        estados: variable.estados,
+        padres: variable.padres.map(padre => padre.nombre),
+        probabilidades: variable.probabilidades
+    }));
 
-    if (
-        evidencia === null ||
-        typeof evidencia !== "object" ||
-        Array.isArray(evidencia)
-    ) {
-        return res.status(400).json({
-            error: "La evidencia debe ser un objeto."
-        });
-    }
-
-    for (const nombre in evidencia) {
-        const variableEvidencia = red.variables.find(
-            elemento => elemento.nombre === nombre
-        );
-
-        if (!variableEvidencia) {
-            return res.status(400).json({
-                error: "La variable de evidencia no existe: " + nombre
-            });
-        }
-
-        if (!variableEvidencia.estados.includes(evidencia[nombre])) {
-            return res.status(400).json({
-                error: "Estado inválido para la variable: " + nombre
-            });
-        }
-    }
-
-    if (Object.hasOwn(evidencia, variable)) {
-        return res.status(400).json({
-            error: "No puedes consultar una variable que también sea evidencia."
-        });
-    }
-
-    // Buscar las variables necesarias para la consulta.
-const variablesNecesarias = new Set();
-
-function agregarAntecesoras(elemento) {
-    if (variablesNecesarias.has(elemento)) {
-        return;
-    }
-
-    variablesNecesarias.add(elemento);
-
-    for (const padre of elemento.padres) {
-        agregarAntecesoras(padre);
-    }
-}
-
-// Incluir la variable consultada.
-agregarAntecesoras(red.obtenerVariable(variable));
-
-// Incluir las variables de evidencia y sus antecesoras.
-for (const nombre in evidencia) {
-    agregarAntecesoras(red.obtenerVariable(nombre));
-}
-
-// Comprobar que todas las variables necesarias tengan probabilidades.
-const variableSinProbabilidades = [...variablesNecesarias].find(
-    elemento =>
-        !elemento.probabilidades ||
-        Object.keys(elemento.probabilidades).length === 0
-);
-
-if (variableSinProbabilidades) {
-    return res.status(400).json({
-        error: `La variable "${variableSinProbabilidades.nombre}" todavía no tiene probabilidades asignadas.`
+    res.json({
+        cantidad: variables.length,
+        variables: variables
     });
-}
+});
 
+
+// =====================================
+// CONSULTAR PROBABILIDADES
+// =====================================
+
+app.post("/api/consultar", (req, res) => {
     try {
+        const { variable, evidencia = {} } = req.body;
+
+        // Comprobar que la variable exista.
+        const variableExiste = red.obtenerVariable(variable);
+
+        if (!variableExiste) {
+            return res.status(400).json({
+                error: "La variable consultada no existe."
+            });
+        }
+
+        // Comprobar que la evidencia sea un objeto.
+        if (
+            evidencia === null ||
+            typeof evidencia !== "object" ||
+            Array.isArray(evidencia)
+        ) {
+            return res.status(400).json({
+                error: "La evidencia debe ser un objeto."
+            });
+        }
+
+        // Validar las variables y estados de la evidencia.
+        for (const nombre in evidencia) {
+            const variableEvidencia = red.obtenerVariable(nombre);
+
+            if (!variableEvidencia) {
+                return res.status(400).json({
+                    error: "La variable de evidencia no existe: " + nombre
+                });
+            }
+
+            if (!variableEvidencia.estados.includes(evidencia[nombre])) {
+                return res.status(400).json({
+                    error: "Estado inválido para la variable: " + nombre
+                });
+            }
+        }
+
+        // La variable consultada no puede ser evidencia.
+        if (Object.hasOwn(evidencia, variable)) {
+            return res.status(400).json({
+                error: "No puedes consultar una variable que también sea evidencia."
+            });
+        }
+
+        // Comprobar que las variables necesarias tengan probabilidades.
+        validarVariablesNecesarias(red, variable, evidencia);
+
+        // Ejecutar la eliminación de variables.
         const resultado = consultar(red, variable, evidencia);
 
         res.json({
@@ -114,6 +126,7 @@ if (variableSinProbabilidades) {
             evidencia: evidencia,
             probabilidades: resultado.tabla
         });
+
     } catch (error) {
         res.status(400).json({
             error: error.message
@@ -121,7 +134,11 @@ if (variableSinProbabilidades) {
     }
 });
 
-// Crear una variable.
+
+// =====================================
+// CREAR UNA VARIABLE
+// =====================================
+
 app.post("/api/variables", (req, res) => {
     try {
         const { nombre, estados } = req.body;
@@ -139,6 +156,7 @@ app.post("/api/variables", (req, res) => {
                 padres: []
             }
         });
+
     } catch (error) {
         res.status(400).json({
             error: error.message
@@ -146,8 +164,11 @@ app.post("/api/variables", (req, res) => {
     }
 });
 
-    
-// Asignar probabilidades a una variable.
+
+// =====================================
+// ASIGNAR PROBABILIDADES
+// =====================================
+
 app.post("/api/probabilidades", (req, res) => {
     try {
         const { nombre, probabilidades } = req.body;
@@ -168,6 +189,7 @@ app.post("/api/probabilidades", (req, res) => {
             variable: variable.nombre,
             probabilidades: variable.probabilidades
         });
+
     } catch (error) {
         res.status(400).json({
             error: error.message
@@ -176,7 +198,10 @@ app.post("/api/probabilidades", (req, res) => {
 });
 
 
-// Crear una relación entre dos variables.
+// =====================================
+// CREAR RELACIONES
+// =====================================
+
 app.post("/api/relaciones", (req, res) => {
     try {
         const { padre, hijo } = req.body;
@@ -198,6 +223,7 @@ app.post("/api/relaciones", (req, res) => {
             padre: variablePadre.nombre,
             hijo: variableHijo.nombre
         });
+
     } catch (error) {
         res.status(400).json({
             error: error.message
@@ -205,7 +231,11 @@ app.post("/api/relaciones", (req, res) => {
     }
 });
 
-// Iniciar el servidor.
+
+// =====================================
+// INICIAR SERVIDOR
+// =====================================
+
 app.listen(PUERTO, () => {
     console.log("Servidor iniciado en http://localhost:" + PUERTO);
 });

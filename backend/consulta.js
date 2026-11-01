@@ -122,4 +122,4 @@ return resultado;
 
 }
 
-export { consultar };
+export { consultar, validarVariablesNecesarias };
