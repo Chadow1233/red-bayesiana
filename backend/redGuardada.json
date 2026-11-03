@@ -41,28 +41,7 @@
             "Lluvia",
             "Aspersor"
         ],
-        "probabilidades": {
-            "sí": {
-                "sí": {
-                    "sí": 0.99,
-                    "no": 0.01
-                },
-                "no": {
-                    "sí": 0.9,
-                    "no": 0.1
-                }
-            },
-            "no": {
-                "sí": {
-                    "sí": 0.8,
-                    "no": 0.2
-                },
-                "no": {
-                    "sí": 0.01,
-                    "no": 0.99
-                }
-            }
-        }
+        "probabilidades": {}
     },
     {
         "nombre": "Temperatura",

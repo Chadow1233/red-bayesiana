@@ -2,7 +2,7 @@ import express from "express";
 import { red as redInicial } from "./red.js";
 import { consultar } from "./consulta.js";
 import { guardarRed, cargarRed } from "./almacenamiento.js";
-import { Variable } from "./redBayesiana.js";
+import { Variable, RedBayesiana } from "./redBayesiana.js";
 
 const app = express();
 const PUERTO = 3000;
@@ -16,7 +16,8 @@ app.get("/api/variables", (req, res) => {
     const variables = red.variables.map(variable => ({
         nombre: variable.nombre,
         estados: variable.estados,
-        padres: variable.padres.map(padre => padre.nombre)
+        padres: variable.padres.map(padre => padre.nombre),
+        probabilidades: variable.probabilidades
     }));
 
     res.json(variables);
@@ -202,6 +203,82 @@ app.post("/api/relaciones", (req, res) => {
         res.status(400).json({
             error: error.message
         });
+    }
+});
+
+// Eliminar una variable de la red
+app.delete("/api/variables/:nombre", (req, res) => {
+    try {
+        const { nombre } = req.params;
+        const index = red.variables.findIndex(v => v.nombre === nombre);
+
+        if (index === -1) {
+            return res.status(404).json({ error: "La variable no existe." });
+        }
+
+        // Eliminar la variable de la lista
+        red.variables.splice(index, 1);
+
+        // Quitar la variable eliminada de las listas de padres de los demas nodos
+        for (const variable of red.variables) {
+            variable.padres = variable.padres.filter(p => p.nombre !== nombre);
+        }
+
+        guardarRed(red);
+        res.json({ mensaje: `Variable "${nombre}" eliminada correctamente.` });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Exportar la red a un objeto JSON
+app.get("/api/exportar", (req, res) => {
+    const datos = red.variables.map(variable => ({
+        nombre: variable.nombre,
+        estados: variable.estados,
+        padres: variable.padres.map(padre => padre.nombre),
+        probabilidades: variable.probabilidades
+    }));
+    res.json(datos);
+});
+
+// Importar una red desde un archivo JSON
+app.post("/api/importar", (req, res) => {
+    try {
+        const datos = req.body;
+        if (!Array.isArray(datos)) {
+            return res.status(400).json({ error: "Formato JSON inválido. Debe ser una lista de variables." });
+        }
+
+        const nuevaRed = new RedBayesiana();
+
+        // 1. Crear las variables
+        for (const dato of datos) {
+            nuevaRed.agregarVariable(new Variable(dato.nombre, dato.estados));
+        }
+
+        // 2. Restaurar relaciones de parentesco
+        for (const dato of datos) {
+            const variable = nuevaRed.obtenerVariable(dato.nombre);
+            for (const nombrePadre of dato.padres) {
+                const padre = nuevaRed.obtenerVariable(nombrePadre);
+                if (padre) variable.agregarPadre(padre);
+            }
+        }
+
+        // 3. Restaurar probabilidades
+        for (const dato of datos) {
+            const variable = nuevaRed.obtenerVariable(dato.nombre);
+            if (dato.probabilidades && Object.keys(dato.probabilidades).length > 0) {
+                variable.agregarProbabilidades(dato.probabilidades);
+            }
+        }
+
+        red = nuevaRed;
+        guardarRed(red);
+        res.json({ mensaje: "Red importada correctamente" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
 });
 

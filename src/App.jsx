@@ -1,122 +1,85 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import FormularioVariable from './componentes/FormularioVariable';
+import LienzoGrafico from './componentes/LienzoGrafico';
+import PanelInferencia from './componentes/PanelInferencia';
+import GestionArchivo from './componentes/GestionArchivo';
+import EditorProbabilidades from './componentes/EditorProbabilidades'; // <-- IMPORTAR
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [recargar, setRecargar] = useState(0);
+  const [variableSeleccionada, setVariableSeleccionada] = useState(null);
+
+  const notificarCambio = () => setRecargar(prev => prev + 1);
+
+  const eliminarNodoSeleccionado = async () => {
+    if (!variableSeleccionada) return;
+
+    if (!confirm(`¿Estás seguro de que deseas eliminar la variable "${variableSeleccionada}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/variables/${encodeURIComponent(variableSeleccionada)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      setVariableSeleccionada(null);
+      notificarCambio();
+    } catch (err) {
+      alert(`Error al eliminar: ${err.message}`);
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Red Bayesiana - Proyecto Final</h1>
+      
+      <GestionArchivo onRedActualizada={notificarCambio} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+          <FormularioVariable onVariableCreada={notificarCambio} />
+          
+          {variableSeleccionada ? (
+            <div style={{ padding: '0.8rem', background: '#333', color: '#fff', borderRadius: '6px', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ margin: 0 }}>
+                  Nodo seleccionado: <strong>{variableSeleccionada}</strong>
+                </p>
+                <button 
+                  onClick={eliminarNodoSeleccionado} 
+                  style={{ backgroundColor: '#d9534f', color: 'white', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  Eliminar Nodo
+                </button>
+              </div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+              {/* EDITOR VISUAL DE PROBABILIDADES */}
+              <EditorProbabilidades 
+                key={variableSeleccionada}
+                variableNombre={variableSeleccionada} 
+                onProbabilidadesGuardadas={notificarCambio} 
+              />
+            </div>
+          ) : (
+            <p style={{ fontSize: '0.85rem', color: '#888' }}>
+              Haz clic en un nodo del lienzo para seleccionar, editar probabilidades o eliminar.
+            </p>
+          )}
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <div>
+          <LienzoGrafico 
+            recargarTrigger={recargar} 
+            onSeleccionarVariable={setVariableSeleccionada} 
+          />
+        </div>
+      </div>
+
+      <PanelInferencia recargarTrigger={recargar} />
+    </div>
+  );
 }
-
-export default App
