@@ -257,6 +257,28 @@ app.delete("/api/variables/:nombre", (req, res) => {
     }
 });
 
+// Eliminar una relacion de la red
+app.delete('/api/relaciones', (req, res) => {
+  try {
+    const { padre, hijo } = req.body;
+
+    const variableHijo = red.obtenerVariable(hijo);
+    if (!variableHijo) {
+      return res.status(404).json({ error: `La variable "${hijo}" no existe.` });
+    }
+
+    // Remover el padre de la lista
+    variableHijo.padres = variableHijo.padres.filter(p => p.nombre !== padre);
+
+    // Persistir cambios
+    guardarRed(red);
+
+    res.json({ mensaje: 'Relación eliminada exitosamente.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Exportar la red a un objeto JSON
 app.get("/api/exportar", (req, res) => {
     const datos = red.variables.map(variable => ({

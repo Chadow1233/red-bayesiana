@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import ReactFlow, { Background, Controls, addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow';
+import ReactFlow, { Background, Controls, applyNodeChanges, applyEdgeChanges } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable }) {
+export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable, onSeleccionarRelacion }) {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 
@@ -11,14 +11,12 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable }
       const res = await fetch('/api/variables');
       const variables = await res.json();
 
-      // Convertir variables del backend a Nodos de React Flow
       const nuevosNodos = variables.map((v, idx) => ({
         id: v.nombre,
         data: { label: `${v.nombre}\n(${v.estados.join('/')})` },
         position: { x: 150 + (idx % 3) * 180, y: 100 + Math.floor(idx / 3) * 120 }
       }));
 
-      // Convertir relaciones de padres a Aristas (Edges)
       const nuevasAristas = [];
       variables.forEach(v => {
         v.padres.forEach(padre => {
@@ -52,7 +50,6 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable }
     []
   );
 
-  // Conectar dos nodos en el lienzo
   const onConnect = useCallback(async (connection) => {
     try {
       const res = await fetch('/api/relaciones', {
@@ -69,6 +66,23 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable }
     }
   }, []);
 
+  const onEdgesDelete = useCallback(async (edgesToDelete) => {
+    for (const edge of edgesToDelete) {
+      try {
+        const res = await fetch('/api/relaciones', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ padre: edge.source, hijo: edge.target })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      } catch (err) {
+        alert(`Error al eliminar relación: ${err.message}`);
+      }
+    }
+    cargarVariables();
+  }, []);
+
   return (
     <div style={{ width: '100%', height: '745px', border: '1px solid #ddd', borderRadius: '8px' }}>
       <ReactFlow
@@ -77,7 +91,20 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable }
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={(_, node) => onSeleccionarVariable(node.id)}
+        onEdgesDelete={onEdgesDelete}
+        deleteKeyCode={['Backspace', 'Delete']}
+        onNodeClick={(_, node) => {
+          if (onSeleccionarRelacion) onSeleccionarRelacion(null);
+          onSeleccionarVariable(node.id);
+        }}
+        onEdgeClick={(_, edge) => {
+          if (onSeleccionarVariable) onSeleccionarVariable(null);
+          if (onSeleccionarRelacion) onSeleccionarRelacion(edge);
+        }}
+        onPaneClick={() => {
+          if (onSeleccionarVariable) onSeleccionarVariable(null);
+          if (onSeleccionarRelacion) onSeleccionarRelacion(null);
+        }}
       >
         <Background />
         <Controls />
