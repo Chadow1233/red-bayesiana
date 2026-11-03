@@ -1,6 +1,16 @@
 import fs from "node:fs";
 import { Variable, RedBayesiana } from "./redBayesiana.js";
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Rutas dinámicas unificadas
+const RUTA_ARCHIVO = path.join(__dirname, 'redGuardada.json');
+const RUTA_TEMPORAL = path.join(__dirname, 'redGuardada.tmp.json');
+
 function guardarRed(red) {
     const datos = red.variables.map(variable => ({
         nombre: variable.nombre,
@@ -9,26 +19,23 @@ function guardarRed(red) {
         probabilidades: variable.probabilidades
     }));
 
-    const archivoTemporal = "./backend/redGuardada.tmp.json";
-    const archivoFinal = "./backend/redGuardada.json";
-
     fs.writeFileSync(
         archivoTemporal,
         JSON.stringify(datos, null, 4)
     );
 
-    fs.renameSync(archivoTemporal, archivoFinal);
+    fs.renameSync(RUTA_TEMPORAL, RUTA_ARCHIVO);
 }
 
 
 function cargarRed() {
-    if (!fs.existsSync("./backend/redGuardada.json")) {
+    if (!fs.existsSync(RUTA_ARCHIVO)) {
         return null;
     }
 
     try {
         const datos = JSON.parse(
-            fs.readFileSync("./backend/redGuardada.json", "utf8")
+            fs.readFileSync(RUTA_ARCHIVO, "utf8")
         );
 
         // Comprobar que sea un arreglo.
