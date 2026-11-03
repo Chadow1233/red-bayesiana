@@ -4,17 +4,20 @@ class RedBayesiana {
     }
 
     agregarVariable(variable) {
-        if (!(variable instanceof Variable)) {
-            throw new Error("Debes agregar una variable válida");
-        }
-
-        if (this.obtenerVariable(variable.nombre)) {
-            throw new Error("La variable ya existe");
-        }
-
-        this.variables.push(variable);
+    if (!(variable instanceof Variable)) {
+        throw new Error("Debes agregar una variable válida");
     }
 
+    if (this.obtenerVariable(variable.nombre)) {
+        throw new Error("La variable ya existe");
+    }
+
+    if (this.variables.length >= 10) {
+        throw new Error("La red no puede tener más de 10 variables");
+    }
+
+    this.variables.push(variable);
+}
     obtenerVariable(nombre) {
         return this.variables.find(
             variable => variable.nombre === nombre
@@ -44,11 +47,11 @@ class Variable {
             throw new Error("Los estados deben ser textos válidos");
         }
 
-        if (new Set(estados).size !== estados.length) {
-            throw new Error(
-                "La variable no puede tener estados repetidos"
-            );
-        }
+        const estadosLimpios = estados.map(estado => estado.trim());
+
+        if (new Set(estadosLimpios).size !== estadosLimpios.length) {
+            throw new Error("La variable no puede tener estados repetidos");
+    }
 
         this.nombre = nombre.trim();
         this.estados = estados.map(estado => estado.trim());
