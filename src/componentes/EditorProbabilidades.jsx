@@ -78,11 +78,18 @@ export default function EditorProbabilidades({ variableNombre, onProbabilidadesG
   };
 
   const handleValorChange = (combKey, estado, valor) => {
+    let num = parseFloat(valor) || 0;
+
+    // Si escribes un número entero como 80 o 20, lo convierte automáticamente a decimal (0.8 y 0.2)
+    if (num > 1 && num <= 100) {
+      num = num / 100;
+    }
+
     setValores(prev => ({
       ...prev,
       [combKey]: {
         ...prev[combKey],
-        [estado]: parseFloat(valor) || 0
+        [estado]: num
       }
     }));
   };
