@@ -7,9 +7,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Rutas dinámicas unificadas
-const RUTA_ARCHIVO = path.join(__dirname, 'redGuardada.json');
-const RUTA_TEMPORAL = path.join(__dirname, 'redGuardada.tmp.json');
+// Rutas de archivos unificadas
+const archivoTemporal = path.join(__dirname, "redGuardada.tmp.json");
+const archivoFinal = path.join(__dirname, "redGuardada.json");
 
 function guardarRed(red) {
     const datos = red.variables.map(variable => ({
@@ -24,26 +24,23 @@ function guardarRed(red) {
         JSON.stringify(datos, null, 4)
     );
 
-    fs.renameSync(RUTA_TEMPORAL, RUTA_ARCHIVO);
+    fs.renameSync(archivoTemporal, archivoFinal);
 }
 
-
 function cargarRed() {
-    if (!fs.existsSync(RUTA_ARCHIVO)) {
+    if (!fs.existsSync(archivoFinal)) {
         return null;
     }
 
     try {
         const datos = JSON.parse(
-            fs.readFileSync(RUTA_ARCHIVO, "utf8")
+            fs.readFileSync(archivoFinal, "utf8")
         );
 
-        // Comprobar que sea un arreglo.
         if (!Array.isArray(datos)) {
             throw new Error("El archivo de la red debe contener un arreglo.");
         }
 
-        // Comprobar que cada variable tenga datos válidos.
         for (const dato of datos) {
             if (
                 !dato ||
@@ -61,16 +58,13 @@ function cargarRed() {
             }
         }
 
-        // Crear la red.
         const red = new RedBayesiana();
 
-        // Crear todas las variables.
         for (const dato of datos) {
             const variable = new Variable(dato.nombre, dato.estados);
             red.agregarVariable(variable);
         }
 
-        // Reconstruir las relaciones.
         for (const dato of datos) {
             const variable = red.obtenerVariable(dato.nombre);
 
@@ -87,7 +81,6 @@ function cargarRed() {
             }
         }
 
-        // Restaurar las probabilidades.
         for (const dato of datos) {
             const variable = red.obtenerVariable(dato.nombre);
 
