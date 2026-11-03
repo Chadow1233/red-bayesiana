@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ReactFlow, { Background, Controls, applyNodeChanges, applyEdgeChanges } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { obtenerRedLocal, guardarRedLocal } from '../componentes/AlmacenamientoLocal';
 
 export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable, onSeleccionarRelacion }) {
   const [nodes, setNodes] = useState([]);
@@ -8,8 +9,14 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable, 
 
   const cargarVariables = async () => {
     try {
-      const res = await fetch('/api/variables');
-      const variables = await res.json();
+      let variables = obtenerRedLocal();
+
+      // Si el dispositivo no tiene red local, descarga la base desde el servidor
+      if (!variables) {
+        const res = await fetch('/api/variables');
+        variables = await res.json();
+        guardarRedLocal(variables); // La guarda localmente para futuras modificaciones
+      }
 
       const nuevosNodos = variables.map((v, idx) => ({
         id: v.nombre,
@@ -19,10 +26,12 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable, 
 
       const nuevasAristas = [];
       variables.forEach(v => {
+        // v.padres puede ser un arreglo de strings ['H'] o de objetos [{nombre: 'H'}]
         v.padres.forEach(padre => {
+          const nombrePadre = typeof padre === 'object' ? padre.nombre : padre;
           nuevasAristas.push({
-            id: `e-${padre}-${v.nombre}`,
-            source: padre,
+            id: `e-${nombrePadre}-${v.nombre}`,
+            source: nombrePadre,
             target: v.nombre,
             animated: true
           });
@@ -50,66 +59,79 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable, 
     []
   );
 
-  const onConnect = useCallback(async (connection) => {
-    try {
-      const res = await fetch('/api/relaciones', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ padre: connection.source, hijo: connection.target })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+  // Crear conexión de forma local en el navegador
+  const onConnect = useCallback((connection) => {
+    const variablesActuales = obtenerRedLocal() || [];
+    const padreId = connection.source;
+    const hijoId = connection.target;
 
-      cargarVariables();
-    } catch (err) {
-      alert(`Error al crear relación: ${err.message}`);
-    }
-  }, []);
-
-  const onEdgesDelete = useCallback(async (edgesToDelete) => {
-    for (const edge of edgesToDelete) {
-      try {
-        const res = await fetch('/api/relaciones', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ padre: edge.source, hijo: edge.target })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-      } catch (err) {
-        alert(`Error al eliminar relación: ${err.message}`);
+    const variablesActualizadas = variablesActuales.map(v => {
+      if (v.nombre === hijoId) {
+        const padresNombres = v.padres.map(p => typeof p === 'object' ? p.nombre : p);
+        if (!padresNombres.includes(padreId)) {
+          return {
+            ...v,
+            padres: [...v.padres, padreId]
+          };
+        }
       }
-    }
+      return v;
+    });
+
+    guardarRedLocal(variablesActualizadas);
     cargarVariables();
   }, []);
 
+  // Eliminar conexión de forma local al presionar Suprimir / Delete
+  const onEdgesDelete = useCallback((edgesToDelete) => {
+    let variablesActuales = obtenerRedLocal() || [];
 
-return (
-  <div style={{ width: '100%', height: '60vh', minHeight: '450px', border: '1px solid #ddd', borderRadius: '8px' }}>
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onEdgesDelete={onEdgesDelete}
-      deleteKeyCode={['Backspace', 'Delete']}
-      onNodeClick={(_, node) => {
-        if (onSeleccionarRelacion) onSeleccionarRelacion(null);
-        onSeleccionarVariable(node.id);
-      }}
-      onEdgeClick={(_, edge) => {
-        if (onSeleccionarVariable) onSeleccionarVariable(null);
-        if (onSeleccionarRelacion) onSeleccionarRelacion(edge);
-      }}
-      onPaneClick={() => {
-        if (onSeleccionarVariable) onSeleccionarVariable(null);
-        if (onSeleccionarRelacion) onSeleccionarRelacion(null);
-      }}
-      fitView // <--- Centra y ajusta el zoom automáticamente a la pantalla del celular
-    >
-      <Background />
-      <Controls />
-    </ReactFlow>
-  </div>
-)}
+    edgesToDelete.forEach(edge => {
+      variablesActuales = variablesActuales.map(v => {
+        if (v.nombre === edge.target) {
+          return {
+            ...v,
+            padres: v.padres.filter(p => {
+              const nombrePadre = typeof p === 'object' ? p.nombre : p;
+              return nombrePadre !== edge.source;
+            })
+          };
+        }
+        return v;
+      });
+    });
+
+    guardarRedLocal(variablesActuales);
+    cargarVariables();
+  }, []);
+
+  return (
+    <div style={{ width: '100%', height: '60vh', minHeight: '450px', border: '1px solid #ddd', borderRadius: '8px' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onEdgesDelete={onEdgesDelete}
+        deleteKeyCode={['Backspace', 'Delete']}
+        onNodeClick={(_, node) => {
+          if (onSeleccionarRelacion) onSeleccionarRelacion(null);
+          onSeleccionarVariable(node.id);
+        }}
+        onEdgeClick={(_, edge) => {
+          if (onSeleccionarVariable) onSeleccionarVariable(null);
+          if (onSeleccionarRelacion) onSeleccionarRelacion(edge);
+        }}
+        onPaneClick={() => {
+          if (onSeleccionarVariable) onSeleccionarVariable(null);
+          if (onSeleccionarRelacion) onSeleccionarRelacion(null);
+        }}
+        fitView
+      >
+        <Background />
+        <Controls />
+      </ReactFlow>
+    </div>
+  );
+}

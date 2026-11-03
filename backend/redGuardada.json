@@ -170,16 +170,5 @@
                 "no": 0.8
             }
         }
-    },
-    {
-        "nombre": "J",
-        "estados": [
-            "sí",
-            "no"
-        ],
-        "padres": [
-            "I"
-        ],
-        "probabilidades": {}
     }
 ]

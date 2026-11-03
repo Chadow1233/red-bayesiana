@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { obtenerRedLocal, guardarRedLocal } from './AlmacenamientoLocal';
 
 export default function EditorProbabilidades({ variableNombre, onProbabilidadesGuardadas }) {
   const [variable, setVariable] = useState(null);
@@ -7,22 +8,21 @@ export default function EditorProbabilidades({ variableNombre, onProbabilidadesG
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    fetch('/api/variables')
-      .then(res => res.json())
-      .then(data => {
-        setVariablesRed(data);
-        const varActual = data.find(v => v.nombre === variableNombre);
-        setVariable(varActual);
-        if (varActual) {
-          inicializarValores(varActual, data);
-        }
-        setCargando(false);
-      })
-      .catch(err => console.error(err));
+    // Obtener variables localmente sin llamar a la API
+    const data = obtenerRedLocal() || [];
+    setVariablesRed(data);
+
+    const varActual = data.find(v => v.nombre === variableNombre);
+    setVariable(varActual);
+    if (varActual) {
+      inicializarValores(varActual, data);
+    }
+    setCargando(false);
   }, [variableNombre]);
 
   // Genera todas las combinaciones posibles de los estados de los padres
-  const obtenerCombinacionesPadres = (padresNombres, listaVariables) => {
+  const obtenerCombinacionesPadres = (padresList, listaVariables) => {
+    const padresNombres = (padresList || []).map(p => typeof p === 'object' ? p.nombre : p);
     const padresObjs = padresNombres
       .map(pNombre => listaVariables.find(v => v.nombre === pNombre))
       .filter(Boolean);
@@ -47,6 +47,7 @@ export default function EditorProbabilidades({ variableNombre, onProbabilidadesG
   };
 
   const inicializarValores = (varObj, listaVariables) => {
+    const padresNombres = (varObj.padres || []).map(p => typeof p === 'object' ? p.nombre : p);
     const combinaciones = obtenerCombinacionesPadres(varObj.padres, listaVariables);
     const nuevosValores = {};
 
@@ -55,7 +56,7 @@ export default function EditorProbabilidades({ variableNombre, onProbabilidadesG
       nuevosValores[key] = {};
 
       let probAnidada = varObj.probabilidades;
-      for (const pNombre of varObj.padres) {
+      for (const pNombre of padresNombres) {
         if (probAnidada && probAnidada[comb[pNombre]]) {
           probAnidada = probAnidada[comb[pNombre]];
         } else {
@@ -86,13 +87,14 @@ export default function EditorProbabilidades({ variableNombre, onProbabilidadesG
     }));
   };
 
-  const guardarProbabilidades = async () => {
+  const guardarProbabilidades = () => {
     if (!variable) return;
 
+    const padresNombres = (variable.padres || []).map(p => typeof p === 'object' ? p.nombre : p);
     const combinaciones = obtenerCombinacionesPadres(variable.padres, variablesRed);
     const tablaFinal = {};
 
-    if (variable.padres.length === 0) {
+    if (padresNombres.length === 0) {
       const rootKey = JSON.stringify({});
       variable.estados.forEach(est => {
         tablaFinal[est] = valores[rootKey]?.[est] || 0;
@@ -115,48 +117,43 @@ export default function EditorProbabilidades({ variableNombre, onProbabilidadesG
       };
 
       combinaciones.forEach(comb => {
-        agregarAObjeto(tablaFinal, variable.padres, comb, valores);
+        agregarAObjeto(tablaFinal, padresNombres, comb, valores);
       });
     }
 
-    try {
-      const res = await fetch('/api/probabilidades', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre: variable.nombre,
-          probabilidades: tablaFinal
-        })
-      });
+    // Actualizar y guardar en el dispositivo local
+    const variablesActuales = obtenerRedLocal() || [];
+    const variablesActualizadas = variablesActuales.map(v => {
+      if (v.nombre === variable.nombre) {
+        return { ...v, probabilidades: tablaFinal };
+      }
+      return v;
+    });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      alert('Probabilidades guardadas con éxito');
-      onProbabilidadesGuardadas();
-    } catch (err) {
-      alert(`Error al guardar probabilidades: ${err.message}`);
-    }
+    guardarRedLocal(variablesActualizadas);
+    alert('Probabilidades guardadas con éxito');
+    if (onProbabilidadesGuardadas) onProbabilidadesGuardadas();
   };
 
   if (cargando || !variable) return <p style={{ color: '#aaa' }}>Cargando tabla...</p>;
 
+  const padresNombres = (variable.padres || []).map(p => typeof p === 'object' ? p.nombre : p);
   const combinaciones = obtenerCombinacionesPadres(variable.padres, variablesRed);
 
   return (
     <div style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #444', borderRadius: '8px', background: '#222', color: '#fff' }}>
       <h4 style={{ margin: '0 0 0.5rem 0' }}>Editar Tabla de Probabilidades: {variable.nombre}</h4>
       <p style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '0.8rem' }}>
-        {variable.padres.length === 0 
+        {padresNombres.length === 0 
           ? 'Asigna la probabilidad para cada estado (deben sumar 1).' 
-          : `Combinaciones según sus padres (${variable.padres.join(', ')}):`}
+          : `Combinaciones según sus padres (${padresNombres.join(', ')}):`}
       </p>
 
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #555' }}>
-              {variable.padres.map(p => (
+              {padresNombres.map(p => (
                 <th key={p} style={{ padding: '0.4rem' }}>{p}</th>
               ))}
               {variable.estados.map(est => (
@@ -169,7 +166,7 @@ export default function EditorProbabilidades({ variableNombre, onProbabilidadesG
               const combKey = JSON.stringify(comb);
               return (
                 <tr key={combKey} style={{ borderBottom: '1px solid #333' }}>
-                  {variable.padres.map(p => (
+                  {padresNombres.map(p => (
                     <td key={p} style={{ padding: '0.4rem', fontWeight: 'bold' }}>{comb[p]}</td>
                   ))}
                   {variable.estados.map(est => (

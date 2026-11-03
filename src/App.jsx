@@ -4,13 +4,14 @@ import LienzoGrafico from './componentes/LienzoGrafico';
 import PanelInferencia from './componentes/PanelInferencia';
 import GestionArchivo from './componentes/GestionArchivo';
 import EditorProbabilidades from './componentes/EditorProbabilidades';
+import { obtenerRedLocal, guardarRedLocal } from './componentes/AlmacenamientoLocal';
 
 export default function App() {
   const [recargar, setRecargar] = useState(0);
   const [variableSeleccionada, setVariableSeleccionada] = useState(null);
   const [relacionSeleccionada, setRelacionSeleccionada] = useState(null);
   
-  // Detectar si la pantalla es movil (< 768px)
+  // Detectar si la pantalla es móvil (< 768px)
   const [esMovil, setEsMovil] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -21,55 +22,60 @@ export default function App() {
 
   const notificarCambio = () => setRecargar(prev => prev + 1);
 
-  const eliminarNodoSeleccionado = async () => {
+  // 1. Eliminar nodo de forma 100% local en localStorage
+  const eliminarNodoSeleccionado = () => {
     if (!variableSeleccionada) return;
 
     if (!confirm(`¿Estás seguro de que deseas eliminar la variable "${variableSeleccionada}"?`)) {
       return;
     }
 
-    try {
-      const res = await fetch(`/api/variables/${encodeURIComponent(variableSeleccionada)}`, {
-        method: 'DELETE'
-      });
-      const data = await res.json();
+    const variablesActuales = obtenerRedLocal() || [];
 
-      if (!res.ok) throw new Error(data.error);
+    // Eliminar la variable seleccionada y quitarla de las relaciones de los demás nodos
+    const variablesModificadas = variablesActuales
+      .filter(v => v.nombre !== variableSeleccionada)
+      .map(v => ({
+        ...v,
+        padres: (v.padres || []).filter(p => {
+          const nombrePadre = typeof p === 'object' ? p.nombre : p;
+          return nombrePadre !== variableSeleccionada;
+        })
+      }));
 
-      setVariableSeleccionada(null);
-      notificarCambio();
-    } catch (err) {
-      alert(`Error al eliminar: ${err.message}`);
-    }
+    guardarRedLocal(variablesModificadas);
+    setVariableSeleccionada(null);
+    notificarCambio();
   };
 
-  const handleEliminarRelacion = async () => {
+  // 2. Eliminar relación de forma local en localStorage
+  const handleEliminarRelacion = () => {
     if (!relacionSeleccionada) return;
-    try {
-      const res = await fetch('/api/relaciones', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          padre: relacionSeleccionada.source,
-          hijo: relacionSeleccionada.target
-        })
-      });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+    const variablesActuales = obtenerRedLocal() || [];
 
-      setRelacionSeleccionada(null);
-      notificarCambio();
-    } catch (err) {
-      alert(`Error al eliminar la relación: ${err.message}`);
-    }
+    const variablesModificadas = variablesActuales.map(variable => {
+      if (variable.nombre === relacionSeleccionada.target) {
+        return {
+          ...variable,
+          padres: (variable.padres || []).filter(p => {
+            const nombrePadre = typeof p === 'object' ? p.nombre : p;
+            return nombrePadre !== relacionSeleccionada.source;
+          })
+        };
+      }
+      return variable;
+    });
+
+    guardarRedLocal(variablesModificadas);
+    setRelacionSeleccionada(null);
+    notificarCambio();
   };
 
   return (
     <div style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto', fontFamily: 'sans-serif' }}>
       <h1 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Red Bayesiana</h1>
 
-      {/* Cambia dinamicamente segun la pantalla: 1 columna en movil, 1fr 2fr en PC */}
       <div 
         style={{ 
           display: 'grid', 

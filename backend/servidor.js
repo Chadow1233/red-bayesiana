@@ -70,10 +70,43 @@ app.get("/api/red", (req, res) => {
 
 app.post("/api/consultar", (req, res) => {
     try {
-        const { variable, evidencia = {} } = req.body;
+        const { variable, evidencia = {}, redLocal } = req.body;
 
-        // Comprobar que la variable exista.
-        const variableExiste = red.obtenerVariable(variable);
+        let redAUsar = red;
+
+        // Si el cliente envía su red personalizada desde localStorage
+        if (Array.isArray(redLocal) && redLocal.length > 0) {
+            const tempRed = new RedBayesiana();
+
+            // 1. Crear variables en una instancia temporal
+            for (const dato of redLocal) {
+                tempRed.agregarVariable(new Variable(dato.nombre, dato.estados));
+            }
+
+            // 2. Restaurar relaciones de parentesco
+            for (const dato of redLocal) {
+                const varObj = tempRed.obtenerVariable(dato.nombre);
+                const padres = Array.isArray(dato.padres) ? dato.padres : [];
+                for (const pNombre of padres) {
+                    const nombrePadre = typeof pNombre === 'object' ? pNombre.nombre : pNombre;
+                    const padreObj = tempRed.obtenerVariable(nombrePadre);
+                    if (padreObj) varObj.agregarPadre(padreObj);
+                }
+            }
+
+            // 3. Restaurar probabilidades
+            for (const dato of redLocal) {
+                const varObj = tempRed.obtenerVariable(dato.nombre);
+                if (dato.probabilidades && Object.keys(dato.probabilidades).length > 0) {
+                    varObj.agregarProbabilidades(dato.probabilidades);
+                }
+            }
+
+            redAUsar = tempRed;
+        }
+
+        // Comprobar que la variable exista en la red a evaluar
+        const variableExiste = redAUsar.obtenerVariable(variable);
 
         if (!variableExiste) {
             return res.status(400).json({
@@ -81,7 +114,7 @@ app.post("/api/consultar", (req, res) => {
             });
         }
 
-        // Comprobar que la evidencia sea un objeto.
+        // Comprobar que la evidencia sea un objeto
         if (
             evidencia === null ||
             typeof evidencia !== "object" ||
@@ -92,9 +125,9 @@ app.post("/api/consultar", (req, res) => {
             });
         }
 
-        // Validar las variables y estados de la evidencia.
+        // Validar las variables y estados de la evidencia
         for (const nombre in evidencia) {
-            const variableEvidencia = red.obtenerVariable(nombre);
+            const variableEvidencia = redAUsar.obtenerVariable(nombre);
 
             if (!variableEvidencia) {
                 return res.status(400).json({
@@ -109,18 +142,16 @@ app.post("/api/consultar", (req, res) => {
             }
         }
 
-        // La variable consultada no puede ser evidencia.
+        // La variable consultada no puede ser evidencia
         if (Object.hasOwn(evidencia, variable)) {
             return res.status(400).json({
                 error: "No puedes consultar una variable que también sea evidencia."
             });
         }
 
-        // Comprobar que las variables necesarias tengan probabilidades.
-        validarVariablesNecesarias(red, variable, evidencia);
-
-        // Ejecutar la eliminación de variables.
-        const resultado = consultar(red, variable, evidencia);
+        // Validar y ejecutar el cálculo de eliminación de variables
+        validarVariablesNecesarias(redAUsar, variable, evidencia);
+        const resultado = consultar(redAUsar, variable, evidencia);
 
         res.json({
             variable: variable,

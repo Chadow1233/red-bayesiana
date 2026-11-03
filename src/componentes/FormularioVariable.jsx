@@ -1,33 +1,39 @@
 import { useState } from 'react';
+import { obtenerRedLocal, guardarRedLocal } from './AlmacenamientoLocal';
 
 export default function FormularioVariable({ onVariableCreada }) {
   const [nombre, setNombre] = useState('');
   const [estados, setEstados] = useState('sí, no');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const listaEstados = estados.split(',').map(s => s.trim()).filter(Boolean);
 
-    if (!nombre || listaEstados.length < 2) {
+    if (!nombre.trim() || listaEstados.length < 2) {
       alert('Debes ingresar un nombre y al menos dos estados separados por coma.');
       return;
     }
 
-    try {
-      const res = await fetch('/api/variables', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, estados: listaEstados })
-      });
-      const data = await res.json();
+    const variables = obtenerRedLocal() || [];
+    const nombreLimpio = nombre.trim();
 
-      if (!res.ok) throw new Error(data.error);
-
-      setNombre('');
-      onVariableCreada();
-    } catch (err) {
-      alert(`Error: ${err.message}`);
+    // Validar que la variable no exista previamente
+    if (variables.some(v => v.nombre.toLowerCase() === nombreLimpio.toLowerCase())) {
+      alert(`La variable "${nombreLimpio}" ya existe.`);
+      return;
     }
+
+    const nuevaVariable = {
+      nombre: nombreLimpio,
+      estados: listaEstados,
+      padres: [],
+      probabilidades: {}
+    };
+
+    // Guardar en el dispositivo del usuario
+    guardarRedLocal([...variables, nuevaVariable]);
+    setNombre('');
+    onVariableCreada();
   };
 
   return (

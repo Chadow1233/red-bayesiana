@@ -1,10 +1,11 @@
-export default function GestionArchivo({ onRedActualizada }) {
-  // Exportar la red actual como archivo JSON descargable
-  const exportarJSON = async () => {
-    try {
-      const res = await fetch('/api/exportar');
-      const data = await res.json();
+import { obtenerRedLocal, guardarRedLocal, limpiarRedLocal } from './AlmacenamientoLocal';
 
+export default function GestionArchivo({ onRedActualizada }) {
+  
+  // Exportar la red guardada en localStorage como archivo JSON
+  const exportarJSON = () => {
+    try {
+      const data = obtenerRedLocal() || [];
       const jsonString = JSON.stringify(data, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -19,25 +20,20 @@ export default function GestionArchivo({ onRedActualizada }) {
     }
   };
 
-  // Cargar una red desde un archivo JSON seleccionado
+  // Importar archivo JSON guardando SOLAMENTE en el navegador del usuario
   const importarJSON = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target.result);
-        const res = await fetch('/api/importar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(json)
-        });
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error);
-
-        alert('Red bayesiana importada con éxito');
+        if (!Array.isArray(json)) {
+          throw new Error("El archivo JSON debe contener una lista de variables.");
+        }
+        guardarRedLocal(json);
+        alert('Red bayesiana importada localmente con éxito');
         onRedActualizada();
       } catch (err) {
         alert(`Error al importar: ${err.message}`);
@@ -47,7 +43,15 @@ export default function GestionArchivo({ onRedActualizada }) {
     e.target.value = ''; // Limpiar input
   };
 
-return (
+  // Restablecer eliminando la clave local del navegador
+  const handleRestablecer = () => {
+    if (confirm("¿Estás seguro de restablecer la red a su versión inicial por defecto? Se perderán los cambios locales.")) {
+      limpiarRedLocal();
+      onRedActualizada();
+    }
+  };
+
+  return (
     <div style={{ 
       padding: '0.4rem 1.2rem',
       border: '1px solid #ccc', 
@@ -57,7 +61,7 @@ return (
     }}>
       <h3 style={{ margin: '0 0 0.8rem 0', fontSize: '0.95rem' }}>Gestión de Archivos</h3>
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-        <button onClick={exportarJSON} style={{ cursor: 'pointer', padding: '0.3rem 0.6rem', background: '#444', color: '#fff', borderRadius: '4px', border: 'none',fontSize: '0.85rem', lineHeight: '1.2' }}>
+        <button onClick={exportarJSON} style={{ cursor: 'pointer', padding: '0.3rem 0.6rem', background: '#444', color: '#fff', borderRadius: '4px', border: 'none', fontSize: '0.85rem', lineHeight: '1.2' }}>
           Exportar Red (JSON)
         </button>
         
@@ -65,6 +69,10 @@ return (
           Importar Red (JSON)
           <input type="file" accept=".json" onChange={importarJSON} style={{ display: 'none' }} />
         </label>
+
+        <button onClick={handleRestablecer} style={{ cursor: 'pointer', padding: '0.3rem 0.6rem', background: '#444', color: '#fff', borderRadius: '4px', border: 'none', fontSize: '0.85rem', lineHeight: '1.2' }}>
+          Restablecer Red <br />Base
+        </button>
       </div>
     </div>
   );

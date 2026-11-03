@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { obtenerRedLocal } from './AlmacenamientoLocal';
 
 export default function PanelInferencia({ recargarTrigger }) {
   const [variables, setVariables] = useState([]);
@@ -7,15 +8,22 @@ export default function PanelInferencia({ recargarTrigger }) {
   const [resultado, setResultado] = useState(null);
 
   useEffect(() => {
-    fetch('/api/variables')
-      .then(res => res.json())
-      .then(data => {
-        setVariables(data);
-        if (data.length > 0 && !consultaVar) setConsultaVar(data[0].nombre);
-      });
+    const dataLocal = obtenerRedLocal();
+    if (dataLocal && dataLocal.length > 0) {
+      setVariables(dataLocal);
+      if (!consultaVar || !dataLocal.some(v => v.nombre === consultaVar)) {
+        setConsultaVar(dataLocal[0].nombre);
+      }
+    } else {
+      fetch('/api/variables')
+        .then(res => res.json())
+        .then(data => {
+          setVariables(data);
+          if (data.length > 0 && !consultaVar) setConsultaVar(data[0].nombre);
+        });
+    }
   }, [recargarTrigger]);
 
-  // Limpia la variable de la evidencia automáticamente si se selecciona como consulta
   const handleCambioVariableConsulta = (nuevaVar) => {
     setConsultaVar(nuevaVar);
     setEvidencia(prev => {
@@ -39,10 +47,11 @@ export default function PanelInferencia({ recargarTrigger }) {
 
   const ejecutarConsulta = async () => {
     try {
+      const redLocal = obtenerRedLocal() || [];
       const res = await fetch('/api/consultar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ variable: consultaVar, evidencia })
+        body: JSON.stringify({ variable: consultaVar, evidencia, redLocal })
       });
       const data = await res.json();
 
