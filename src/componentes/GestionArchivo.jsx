@@ -49,13 +49,13 @@ export default function GestionArchivo({ onRedActualizada }) {
 
 return (
     <div style={{ 
-      padding: '0.4rem 0.8rem',
+      padding: '0.4rem 1.2rem',
       border: '1px solid #ccc', 
       borderRadius: '8px', 
       marginBottom: '1rem',
       maxWidth: '310px',
     }}>
-      <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.95rem' }}>Gestión de Archivos</h3>
+      <h3 style={{ margin: '0 0 0.8rem 0', fontSize: '0.95rem' }}>Gestión de Archivos</h3>
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
         <button onClick={exportarJSON} style={{ cursor: 'pointer', padding: '0.3rem 0.6rem', background: '#444', color: '#fff', borderRadius: '4px', border: 'none',fontSize: '0.85rem', lineHeight: '1.2' }}>
           Exportar Red (JSON)

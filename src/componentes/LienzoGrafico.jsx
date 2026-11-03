@@ -83,32 +83,33 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable, 
     cargarVariables();
   }, []);
 
-  return (
-    <div style={{ width: '100%', height: '745px', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onEdgesDelete={onEdgesDelete}
-        deleteKeyCode={['Backspace', 'Delete']}
-        onNodeClick={(_, node) => {
-          if (onSeleccionarRelacion) onSeleccionarRelacion(null);
-          onSeleccionarVariable(node.id);
-        }}
-        onEdgeClick={(_, edge) => {
-          if (onSeleccionarVariable) onSeleccionarVariable(null);
-          if (onSeleccionarRelacion) onSeleccionarRelacion(edge);
-        }}
-        onPaneClick={() => {
-          if (onSeleccionarVariable) onSeleccionarVariable(null);
-          if (onSeleccionarRelacion) onSeleccionarRelacion(null);
-        }}
-      >
-        <Background />
-        <Controls />
-      </ReactFlow>
-    </div>
-  );
-}
+
+return (
+  <div style={{ width: '100%', height: '60vh', minHeight: '450px', border: '1px solid #ddd', borderRadius: '8px' }}>
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onEdgesDelete={onEdgesDelete}
+      deleteKeyCode={['Backspace', 'Delete']}
+      onNodeClick={(_, node) => {
+        if (onSeleccionarRelacion) onSeleccionarRelacion(null);
+        onSeleccionarVariable(node.id);
+      }}
+      onEdgeClick={(_, edge) => {
+        if (onSeleccionarVariable) onSeleccionarVariable(null);
+        if (onSeleccionarRelacion) onSeleccionarRelacion(edge);
+      }}
+      onPaneClick={() => {
+        if (onSeleccionarVariable) onSeleccionarVariable(null);
+        if (onSeleccionarRelacion) onSeleccionarRelacion(null);
+      }}
+      fitView // <--- Centra y ajusta el zoom automáticamente a la pantalla del celular
+    >
+      <Background />
+      <Controls />
+    </ReactFlow>
+  </div>
+)}

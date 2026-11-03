@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FormularioVariable from './componentes/FormularioVariable';
 import LienzoGrafico from './componentes/LienzoGrafico';
 import PanelInferencia from './componentes/PanelInferencia';
@@ -9,6 +9,15 @@ export default function App() {
   const [recargar, setRecargar] = useState(0);
   const [variableSeleccionada, setVariableSeleccionada] = useState(null);
   const [relacionSeleccionada, setRelacionSeleccionada] = useState(null);
+  
+  // Detectar si la pantalla es movil (< 768px)
+  const [esMovil, setEsMovil] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setEsMovil(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const notificarCambio = () => setRecargar(prev => prev + 1);
 
@@ -50,17 +59,26 @@ export default function App() {
       if (!res.ok) throw new Error(data.error);
 
       setRelacionSeleccionada(null);
-      notificarCambio(); // Usa el helper notificarCambio() en lugar de setRecargarTrigger
+      notificarCambio();
     } catch (err) {
       alert(`Error al eliminar la relación: ${err.message}`);
     }
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Red Bayesiana</h1>
+    <div style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Red Bayesiana</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
+      {/* Cambia dinamicamente segun la pantalla: 1 columna en movil, 1fr 2fr en PC */}
+      <div 
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: esMovil ? '1fr' : '1fr 2fr', 
+          gap: '1.5rem',
+          marginBottom: '1.5rem'
+        }}
+      >
+        {/* Panel Izquierdo / Formularios */}
         <div>
           <GestionArchivo onRedActualizada={notificarCambio} />
           <FormularioVariable onVariableCreada={notificarCambio} />
@@ -112,7 +130,8 @@ export default function App() {
           )}
         </div>
 
-        <div>
+        {/* Panel Derecho / Lienzo */}
+        <div style={{ width: '100%', minWidth: 0 }}>
           <LienzoGrafico 
             recargarTrigger={recargar} 
             onSeleccionarVariable={setVariableSeleccionada} 
