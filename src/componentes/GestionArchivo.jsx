@@ -47,13 +47,21 @@ export default function GestionArchivo({ onRedActualizada }) {
     e.target.value = ''; // Limpiar input
   };
 
-  return (
-    <div style={{ padding: '1rem', border: '1px solid #ccc', borderRadius: '8px', marginBottom: '1rem' }}>
-      <h3>Gestión de Archivos (JSON)</h3>
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <button onClick={exportarJSON}>Exportar Red (JSON)</button>
+return (
+    <div style={{ 
+      padding: '0.4rem 0.8rem',
+      border: '1px solid #ccc', 
+      borderRadius: '8px', 
+      marginBottom: '1rem',
+      maxWidth: '310px',
+    }}>
+      <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.95rem' }}>Gestión de Archivos</h3>
+      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+        <button onClick={exportarJSON} style={{ cursor: 'pointer', padding: '0.3rem 0.6rem', background: '#444', color: '#fff', borderRadius: '4px', border: 'none',fontSize: '0.85rem', lineHeight: '1.2' }}>
+          Exportar Red (JSON)
+        </button>
         
-        <label style={{ cursor: 'pointer', padding: '0.4rem 0.8rem', background: '#444', color: '#fff', borderRadius: '4px' }}>
+        <label style={{ cursor: 'pointer', padding: '0.3rem 0.6rem', background: '#444', color: '#fff', borderRadius: '4px', fontSize: '0.85rem', lineHeight: '1.2' }}>
           Importar Red (JSON)
           <input type="file" accept=".json" onChange={importarJSON} style={{ display: 'none' }} />
         </label>

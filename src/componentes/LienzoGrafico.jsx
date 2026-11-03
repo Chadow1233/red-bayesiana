@@ -70,7 +70,7 @@ export default function LienzoGrafico({ recargarTrigger, onSeleccionarVariable }
   }, []);
 
   return (
-    <div style={{ width: '100%', height: '450px', border: '1px solid #ddd', borderRadius: '8px' }}>
+    <div style={{ width: '100%', height: '745px', border: '1px solid #ddd', borderRadius: '8px' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

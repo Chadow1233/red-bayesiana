@@ -35,13 +35,12 @@ export default function App() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Red Bayesiana - Proyecto Final</h1>
-      
-      <GestionArchivo onRedActualizada={notificarCambio} />
+      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Red Bayesiana</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
         <div>
-          <FormularioVariable onVariableCreada={notificarCambio} />
+            <GestionArchivo onRedActualizada={notificarCambio} />
+            <FormularioVariable onVariableCreada={notificarCambio} />
           
           {variableSeleccionada ? (
             <div style={{ padding: '0.8rem', background: '#333', color: '#fff', borderRadius: '6px', marginTop: '0.5rem' }}>
